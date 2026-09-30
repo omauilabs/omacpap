@@ -37,28 +37,30 @@
     " ": ["..", "..", "..", "..", "..", "..", ".."],
   };
 
-  // Pixel-art hand, two poses a beat apart so it reads as waving.
-  // The fingertips swing one column; the small marks show motion.
+  // Pixel-art open hand: four long fingers with one-square gaps, thumb out to the left.
+  // It waves by tilting (fingertips lean right) and rocking one column to the right,
+  // so the whole shape stays intact instead of flickering fingertip by fingertip.
   const HAND = [
     [
+      "..#.#....",
       "..#.#.#..",
       "..#.#.#.#",
-      "..#######",
       "#.#######",
       ".########",
-      "..######.",
-      "...####..",
+      "..#######",
+      "...#####.",
     ],
     [
+      "...#.#...",
       "...#.#.#.",
       "..#.#.#.#",
-      "..#######",
-      "##.######",
+      "#.#######",
       ".########",
-      "..######.",
-      "...####..",
+      "..#######",
+      "...#####.",
     ],
   ];
+  const HAND_ROCK = 1; // extra column the tilted pose shifts into
 
   let noSign = false;
   const reduced = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -98,7 +100,7 @@
 
   function run(strip, name, { onDone } = {}) {
     const cols = usableColumns(strip);
-    const handW = HAND[0][0].length;
+    const handW = HAND[0][0].length + HAND_ROCK;
     const clean = (name || "").toUpperCase().replace(/[^A-Z ]/g, "").trim().split(/\s+/)[0] || "";
     // Try "HI JAMES" + hand, then "HI" + hand; bail on very narrow windows.
     let layout = null;
@@ -124,9 +126,12 @@
       c.style.setProperty("--on", `${x * 22}ms`);
       c.classList.add("px");
     }
+    let shownOnce = false;
     const hand = (frame) => {
+      if (shownOnce) strip.classList.add("hand-live");
+      shownOnce = true;
       strip.querySelectorAll(".px-hand").forEach((c) => c.classList.remove("px-hand"));
-      for (const [x, r] of handPixels(frame, handX)) {
+      for (const [x, r] of handPixels(frame, handX + (frame ? HAND_ROCK : 0))) {
         const c = cellAt(x, r);
         if (c) { c.style.setProperty("--on", "0ms"); c.classList.add("px-hand"); }
       }
@@ -184,7 +189,7 @@
   function clearWash(strip) {
     (strip._washTimers || []).forEach(clearTimeout);
     strip._washTimers = null;
-    strip.classList.remove("display", "washing", "wave-once");
+    strip.classList.remove("display", "washing", "wave-once", "hand-live");
     strip.querySelectorAll(".px, .px-hand, .shown").forEach((c) => c.classList.remove("px", "px-hand", "shown"));
   }
 

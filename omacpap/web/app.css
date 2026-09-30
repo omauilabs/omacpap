@@ -97,7 +97,10 @@ main { padding: 0 20px 48px; max-width: 1400px; margin: 0 auto; }
   animation-delay: var(--on, 0ms);
 }
 .strip.display .cell.px { --led: var(--accent); }
-.strip.display .cell.px-hand { --led: var(--warn); animation-duration: 90ms; }
+.strip.display .cell.px-hand { --led: var(--warn); }
+/* while waving, poses swap instantly so no finger is ever caught half-lit */
+.strip.display.hand-live .cell:not(.pad):not(.shown) { transition: none; }
+.strip.display.hand-live .cell.px-hand:not(.pad):not(.shown) { animation: none; }
 @keyframes led-on { 0% { opacity: .15; } 35% { opacity: 1; } 55% { opacity: .45; } 100% { opacity: 1; } }
 
 /* wash: each square regains its data color the moment the crest reaches it */
