@@ -56,14 +56,40 @@
 
   <main id="app" hidden>
     <section class="hero">
-      <p id="last-night" class="last-night"></p>
-      <div class="strip-wrap">
-        <div id="strip" class="strip" role="grid" aria-label="Nightly usage calendar"></div>
+      <div class="hero-main">
+        <p id="last-night" class="last-night"></p>
+        <div class="strip-wrap">
+          <div id="strip" class="strip" role="grid" aria-label="Nightly usage calendar"></div>
+        </div>
+        <div class="strip-legend" aria-hidden="true">
+            <span>0 h</span><i class="l0"></i><i class="l1"></i><i class="l2"></i><i class="l3"></i><i class="l4"></i><span id="legend-max">8+ h</span>
+            <span class="gap"></span><i class="goal"></i><span id="legend-goal">met goal</span>
+        </div>
       </div>
-      <div class="strip-legend" aria-hidden="true">
-          <span>0 h</span><i class="l0"></i><i class="l1"></i><i class="l2"></i><i class="l3"></i><i class="l4"></i><span id="legend-max">8+ h</span>
-          <span class="gap"></span><i class="goal"></i><span id="legend-goal">met goal</span>
-      </div>
+      <figure class="device" id="device" aria-hidden="true">
+        <img id="device-photo" alt="" hidden>
+        <svg id="device-art" viewBox="0 0 320 240" xmlns="http://www.w3.org/2000/svg">
+          <ellipse class="d-shadow" cx="160" cy="214" rx="118" ry="10"/>
+          <!-- hose: leaves the rear outlet and loops off toward the bed -->
+          <path class="d-hose" d="M236 96 C 250 60, 282 52, 296 20"/>
+          <path class="d-hose-rib" d="M236 96 C 250 60, 282 52, 296 20"/>
+          <rect class="d-port" x="226" y="90" width="20" height="12" rx="3"/>
+          <!-- body -->
+          <rect class="d-body" x="56" y="96" width="200" height="112" rx="20"/>
+          <path class="d-top" d="M76 96 H236 A20 20 0 0 1 256 116 V118 H56 V116 A20 20 0 0 1 76 96 Z"/>
+          <!-- screen shows last night's hours -->
+          <rect class="d-screen" x="80" y="126" width="104" height="48" rx="7"/>
+          <path class="d-moon" d="M96 138 a7 7 0 1 0 8 9 a5.5 5.5 0 1 1 -8 -9 z"/>
+          <text id="device-hours" class="d-hours" x="170" y="155" text-anchor="end">--</text>
+          <text class="d-label" x="170" y="168" text-anchor="end">last night</text>
+          <!-- controls -->
+          <circle class="d-btn d-btn-on" cx="214" cy="138" r="8"/>
+          <circle class="d-btn" cx="214" cy="162" r="8"/>
+          <!-- water chamber drawer -->
+          <rect class="d-tank" x="80" y="182" width="152" height="16" rx="5"/>
+          <path class="d-water" d="M84 192 q 9 -4 18 0 t 18 0 t 18 0 t 18 0 t 18 0 t 18 0 t 18 0 t 18 0"/>
+        </svg>
+      </figure>
     </section>
 
     <section class="grid">
@@ -126,6 +152,13 @@
         <label>Leak line (L/min)<input name="leak_reference" type="number" step="1" min="5" max="60"></label>
         <button class="primary" type="submit">Save</button>
       </form>
+      <h3>Device picture</h3>
+      <p class="fine">Shown in the top-right of the dashboard. Use a PNG with a transparent background for the cleanest look — a photo of your own machine works great.</p>
+      <div class="row">
+        <label class="btn" for="device-file">Choose image…</label>
+        <input id="device-file" type="file" accept="image/png,image/webp,image/jpeg" hidden>
+        <button id="btn-device-reset">Use built-in illustration</button>
+      </div>
       <h3>SD card (optional)</h3>
       <p class="fine">Your machine uploads summaries over cellular, which is all myAir keeps. If you ever insert an SD card, the AirSense records per-breath detail and apnea types to it; import it here to add those to each night.</p>
       <div class="row"><input id="sd-path" placeholder="Card path (auto-detected if blank)"><button id="btn-sd">Import card</button></div>

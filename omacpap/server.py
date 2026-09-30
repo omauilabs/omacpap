@@ -5,9 +5,12 @@ a cross-site form or image tag cannot send."""
 
 from __future__ import annotations
 
+import base64
+import binascii
 import csv
 import io
 import json
+import os
 import logging
 import mimetypes
 import threading
@@ -18,7 +21,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 
-from . import __version__, analysis, db, report, secrets_store, theme
+from . import __version__, analysis, db, paths, report, secrets_store, theme
 from .myair import MFARequired, MyAirClient, MyAirError, SessionState, get_region
 from .sync import make_client, persist_session, run_sync
 
@@ -94,6 +97,7 @@ def api_state() -> dict[str, Any]:
             "extra_fields": cfg.get("extra_fields") or [],
             "settings": {k: cfg[k] for k in ("usage_goal_hours", "ahi_reference", "leak_reference")},
             "mfa_pending": bool(_pending_login),
+            "device_image": _device_image_version(),
             "job": JOB.as_dict(),
             "syncs": db.last_syncs(con, 5),
             "theme": theme.signature(),
@@ -217,6 +221,48 @@ def api_import_sd(body: dict[str, Any]) -> dict[str, Any]:
     return {"started": JOB.start("sd-import", lambda p: sdcard.import_card(cards[0]))}
 
 
+DEVICE_IMAGE_TYPES = {b"\x89PNG\r\n\x1a\n": ("png", "image/png"), b"\xff\xd8\xff": ("jpg", "image/jpeg"),
+                      b"RIFF": ("webp", "image/webp")}
+DEVICE_IMAGE_MAX = 6 * 1024 * 1024
+
+
+def _device_image() -> tuple[Path, str] | None:
+    for ext, ctype in (("png", "image/png"), ("webp", "image/webp"), ("jpg", "image/jpeg")):
+        p = paths.data_dir() / f"device-image.{ext}"
+        if p.exists():
+            return p, ctype
+    return None
+
+
+def _device_image_version() -> str | None:
+    found = _device_image()
+    return str(found[0].stat().st_mtime_ns) if found else None
+
+
+def api_device_image(body: dict[str, Any]) -> dict[str, Any]:
+    """Save (or clear) the user's own picture of their machine, shown in the dashboard header."""
+    for old in paths.data_dir().glob("device-image.*"):
+        old.unlink()
+    if body.get("clear"):
+        return {"ok": True, "device_image": None}
+    data = str(body.get("data", ""))
+    if "," in data:
+        data = data.split(",", 1)[1]
+    try:
+        raw = base64.b64decode(data, validate=True)
+    except (binascii.Error, ValueError) as e:
+        raise MyAirError("That file couldn't be read as an image.") from e
+    if len(raw) > DEVICE_IMAGE_MAX:
+        raise MyAirError("Image is larger than 6 MB — try a smaller PNG.")
+    kind = next((v for magic, v in DEVICE_IMAGE_TYPES.items() if raw.startswith(magic)), None)
+    if not kind or (kind[0] == "webp" and raw[8:12] != b"WEBP"):
+        raise MyAirError("Use a PNG, WebP or JPEG image.")
+    dest = paths.data_dir() / f"device-image.{kind[0]}"
+    dest.write_bytes(raw)
+    os.chmod(dest, 0o600)
+    return {"ok": True, "device_image": _device_image_version()}
+
+
 def export_csv() -> str:
     with db.session() as con:
         rows = db.nights(con)
@@ -233,8 +279,9 @@ def export_csv() -> str:
 POST_ROUTES = {
     "/api/login": api_login, "/api/mfa": api_mfa, "/api/sync": api_sync, "/api/probe": api_probe,
     "/api/note": api_note, "/api/settings": api_settings, "/api/logout": api_logout,
-    "/api/import-sd": api_import_sd,
+    "/api/import-sd": api_import_sd, "/api/device-image": api_device_image,
 }
+BODY_LIMITS = {"/api/device-image": DEVICE_IMAGE_MAX * 4 // 3 + 4096}
 
 
 # ------------------------------------------------------------------ HTTP plumbing
@@ -278,6 +325,11 @@ class Handler(BaseHTTPRequestHandler):
                 return self._file(WEB / "index.html")
             if url.path.startswith("/static/"):
                 return self._file(WEB / url.path.removeprefix("/static/"))
+            if url.path == "/device-image":
+                found = _device_image()
+                if not found:
+                    return self._send(404, b"no image", "text/plain")
+                return self._send(200, found[0].read_bytes(), found[1])
             if url.path == "/theme.css":
                 return self._send(200, theme.css().encode(), "text/css")
             if url.path == "/api/state":
@@ -302,11 +354,14 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(HTTPStatus.FORBIDDEN, b"forbidden", "text/plain")
         if not (self.headers.get("Content-Type") or "").startswith("application/json"):
             return self._send(HTTPStatus.UNSUPPORTED_MEDIA_TYPE, b"json only", "text/plain")
-        route = POST_ROUTES.get(urllib.parse.urlparse(self.path).path)
+        path = urllib.parse.urlparse(self.path).path
+        route = POST_ROUTES.get(path)
         if not route:
             return self._send(404, b"not found", "text/plain")
         try:
-            length = min(int(self.headers.get("Content-Length") or 0), 64_000)
+            length = int(self.headers.get("Content-Length") or 0)
+            if length > BODY_LIMITS.get(path, 64_000):
+                return self._json({"error": "Request too large."}, 413)
             body = json.loads(self.rfile.read(length) or b"{}")
             self._json(route(body))
         except MyAirError as e:

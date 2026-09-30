@@ -18,6 +18,7 @@ OmaCPAP signs in to ResMed myAir the same way the myAir website does, downloads 
 | **Dashboard** | Year-at-a-glance usage calendar, trend charts (daily for ≤200 nights, weekly averages beyond), compliance %, streaks, best 30-night run, weekday patterns, plain-language observations, per-night notes. |
 | **Printable report** | `Report` button or `omacpap report` — a clean HTML page to print or save as PDF for sleep-clinic visits. |
 | **Field discovery** | `omacpap probe` tests ~60 candidate field names against ResMed's schema (introspection is disabled) and starts saving any extras your account returns. |
+| **Device picture** | The header shows a theme-colored CPAP illustration whose screen displays last night's hours. Swap in your own photo (transparent PNG works best) under Settings → Device picture. |
 | **Theme-aware** | Reads `~/.config/omarchy/current/theme/colors.toml`; switching themes recolors the app live. |
 | **Keyboard-first** | `1`–`4` range · `s` sync · `r` report · `,` settings · `j`/`k` step through nights · `Esc` close. |
 | **Exports** | CSV / JSON of every night (`omacpap export`), plus the raw myAir record for each night in the database. |
@@ -140,7 +141,7 @@ Endpoints, client IDs, and the flow come from [prestomation/resmed_myair_sensors
 ## Development
 
 ```bash
-python3 -m unittest discover -s tests -v     # 16 tests, all against a local mock of ResMed
+python3 -m unittest discover -s tests -v     # 17 tests, all against a local mock of ResMed
 python3 -m tests.mock_myair 9999 &           # fake myAir with ~3.5 years of synthetic nights
 OMACPAP_MYAIR_MOCK=http://127.0.0.1:9999 OMACPAP_DATA_DIR=/tmp/oc omacpap login   # password: demo (or "mfa", code 123456)
 ```

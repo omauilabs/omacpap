@@ -46,7 +46,30 @@ button:disabled { opacity: .5; cursor: progress; }
 
 /* ---------- hero ---------- */
 main { padding: 0 20px 48px; max-width: 1400px; margin: 0 auto; }
-.hero { padding: 22px 0 18px; border-bottom: 1px solid var(--border); }
+.hero { padding: 22px 0 18px; border-bottom: 1px solid var(--border);
+        display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 24px; align-items: center; }
+.hero-main { min-width: 0; }
+
+/* ---------- device illustration (transparent; colors follow the theme) ---------- */
+.device { margin: 0; width: clamp(220px, 24vw, 340px); align-self: stretch; display: grid; place-items: center; }
+.device img { max-width: 100%; max-height: 240px; object-fit: contain; }
+.device svg { width: 100%; height: auto; overflow: visible; }
+.d-shadow { fill: color-mix(in srgb, var(--fg) 9%, transparent); }
+.d-hose { fill: none; stroke: color-mix(in srgb, var(--fg) 30%, var(--bg)); stroke-width: 15; stroke-linecap: round; }
+.d-hose-rib { fill: none; stroke: color-mix(in srgb, var(--fg) 18%, var(--bg)); stroke-width: 15; stroke-dasharray: 2 5; }
+.d-port { fill: color-mix(in srgb, var(--fg) 24%, var(--bg)); }
+.d-body { fill: color-mix(in srgb, var(--fg) 10%, var(--bg)); stroke: var(--border); stroke-width: 1.5; }
+.d-top { fill: color-mix(in srgb, var(--fg) 16%, var(--bg)); }
+.d-screen { fill: var(--bg); stroke: color-mix(in srgb, var(--accent) 45%, var(--bg)); stroke-width: 1.5; }
+.d-moon { fill: var(--accent); }
+.d-hours { fill: var(--accent); font: 700 22px monospace; }
+.d-label { fill: var(--muted); font: 9px monospace; }
+.d-btn { fill: color-mix(in srgb, var(--fg) 20%, var(--bg)); stroke: var(--border); }
+.d-btn-on { stroke: var(--accent); stroke-width: 2; }
+.d-tank { fill: color-mix(in srgb, var(--c4) 20%, var(--bg)); stroke: color-mix(in srgb, var(--c4) 55%, var(--bg)); stroke-width: 1.2; }
+.d-water { fill: none; stroke: var(--c4); stroke-width: 1.4; opacity: .8; }
+@media (max-width: 1100px) { .device { width: 200px; } }
+@media (max-width: 760px) { .hero { grid-template-columns: 1fr; } .device { display: none; } }
 .last-night { font-size: 17px; margin: 0 0 16px; max-width: 90ch; }
 .last-night b { color: var(--accent); font-weight: 700; }
 .last-night .dim { color: var(--muted); }

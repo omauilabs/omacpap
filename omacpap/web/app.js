@@ -118,7 +118,7 @@
       $("#first-sync")?.addEventListener("click", () => startSync(false));
       return;
     }
-    renderLastNight(); renderStrip(); renderFacts(); renderCharts(); renderTable();
+    renderLastNight(); renderDevice(); renderStrip(); renderFacts(); renderCharts(); renderTable();
   }
 
   function renderLastNight() {
@@ -136,6 +136,19 @@
       `${ln.mask_pairs ?? "—"} mask on/off, myAir score <b>${ln.sleep_score ?? "—"}</b>.` +
       (flags.length ? ` ${flags.join(", ")}.` : "") +
       ` <span class="dim">30-night average ${num(w30.usage_avg_h)} h, streak ${S.summary.streak_current} night${S.summary.streak_current === 1 ? "" : "s"} at ${goalH()}+ h.</span>`;
+  }
+
+  function renderDevice() {
+    const v = S.state?.device_image;
+    const img = $("#device-photo"), art = $("#device-art");
+    if (v) {
+      if (img.dataset.v !== v) { img.src = `/device-image?v=${v}`; img.dataset.v = v; }
+      img.hidden = false; art.style.display = "none";
+    } else {
+      img.hidden = true; img.removeAttribute("src"); delete img.dataset.v; art.style.display = "";
+    }
+    const ln = S.summary?.last_night;
+    $("#device-hours").textContent = ln ? `${((ln.usage_min || 0) / 60).toFixed(1)}h` : "--";
   }
 
   function level(min) {
@@ -553,6 +566,23 @@
   $("#btn-logout").addEventListener("click", async () => {
     if (!confirm("Sign out of myAir? Your downloaded nights stay on this computer.")) return;
     await api("/api/logout", {}); closeDrawers(); await loadState(); showConnect();
+  });
+  $("#device-file").addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async () => {
+      try {
+        await api("/api/device-image", { data: reader.result });
+        await loadState(); renderDevice();
+      } catch (err) { alert(err.message); }
+      e.target.value = "";
+    };
+    reader.readAsDataURL(file);
+  });
+  $("#btn-device-reset").addEventListener("click", async () => {
+    await api("/api/device-image", { clear: true });
+    await loadState(); renderDevice();
   });
   $("#btn-sd").addEventListener("click", async () => {
     try { await api("/api/import-sd", { path: $("#sd-path").value || null }); closeDrawers(); watchJob(); }

@@ -218,6 +218,25 @@ class T05_Server(unittest.TestCase):
         self.assertEqual(secrets_store.load_config()["usage_goal_hours"], 5.0)
         self.post("/api/settings", {"usage_goal_hours": 4})
 
+    def test_device_image_upload(self):
+        import base64
+        import struct
+        import zlib
+        # 1x1 transparent PNG
+        def chunk(t, d): return struct.pack(">I", len(d)) + t + d + struct.pack(">I", zlib.crc32(t + d))
+        png = (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", 1, 1, 8, 6, 0, 0, 0))
+               + chunk(b"IDAT", zlib.compress(b"\x00\x00\x00\x00\x00")) + chunk(b"IEND", b""))
+        code, r = self.post("/api/device-image", {"data": "data:image/png;base64," + base64.b64encode(png).decode()})
+        self.assertEqual(code, 200)
+        self.assertTrue(r["device_image"])
+        code, body, h = self.get("/device-image")
+        self.assertEqual((code, h["Content-Type"], body), (200, "image/png", png))
+        code, _ = self.post("/api/device-image", {"data": base64.b64encode(b"<svg onload=alert(1)>").decode()})
+        self.assertEqual(code, 400)
+        code, _ = self.post("/api/device-image", {"clear": True})
+        with self.assertRaises(urllib.error.HTTPError):
+            self.get("/device-image")
+
     def test_login_mfa_via_api(self):
         code, r = self.post("/api/login", {"username": "demo@example.com", "password": "mfa", "region": "NA"})
         self.assertEqual((code, r["status"]), (200, "MFA_REQUIRED"))
