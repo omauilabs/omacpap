@@ -80,30 +80,41 @@ main { padding: 0 20px 48px; max-width: 1400px; margin: 0 auto; }
 .strip .cell { width: 13px; height: 13px; background: var(--faint); cursor: pointer; border: 0; padding: 0; }
 .strip .cell.pad { background: transparent; cursor: default; }
 
-/* Rolling wave: each square lifts and glows in turn, phase set by its column and row,
-   so the crest travels diagonally across the calendar. Transform/opacity only (GPU-cheap). */
+/* ---- entrance: LED sign, then one wave hands the squares back to the data ---- */
 .strip .cell { position: relative; }
-.strip .cell::after {
-  content: ""; position: absolute; inset: 0; pointer-events: none;
-  background: var(--fg); opacity: 0;
+.strip .cell::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: var(--fg); opacity: 0; }
+
+/* display mode: every square goes dark like an unlit LED panel */
+.strip.display .cell:not(.pad):not(.shown) {
+  background: color-mix(in srgb, var(--fg) 7%, var(--bg)) !important;
+  box-shadow: none !important;
+  transition: background 160ms linear;
 }
-.strip.wave .cell:not(.pad) {
-  animation: cell-wave 4.2s ease-in-out infinite;
-  animation-delay: calc(var(--col, 0) * 75ms + var(--row, 0) * 55ms - 20s);
+.strip.display .cell.px:not(.pad):not(.shown), .strip.display .cell.px-hand:not(.pad):not(.shown) {
+  box-shadow: 0 0 7px 1px color-mix(in srgb, var(--led) 60%, transparent) !important;
+  background: var(--led) !important;
+  animation: led-on 260ms steps(4, end) both;
+  animation-delay: var(--on, 0ms);
 }
-.strip.wave .cell:not(.pad)::after {
-  animation: cell-glow 4.2s ease-in-out infinite;
-  animation-delay: inherit;
+.strip.display .cell.px { --led: var(--accent); }
+.strip.display .cell.px-hand { --led: var(--warn); animation-duration: 90ms; }
+@keyframes led-on { 0% { opacity: .15; } 35% { opacity: 1; } 55% { opacity: .45; } 100% { opacity: 1; } }
+
+/* wash: each square regains its data color the moment the crest reaches it */
+.strip.washing .cell.shown {
+  transition: background 300ms ease, box-shadow 300ms ease;
+  transition-delay: calc(var(--row, 0) * 22ms);
 }
-.strip.wave:hover .cell, .strip.wave:hover .cell::after { animation-play-state: paused; }
-@keyframes cell-wave {
-  0%, 70%, 100% { transform: translateY(0) scale(1); }
-  82% { transform: translateY(-3px) scale(1.12); }
+.strip.wave-once .cell:not(.pad) {
+  animation: cell-wave 900ms ease-in-out both;
+  animation-delay: calc(var(--wcol, 0) * 30ms + var(--row, 0) * 22ms);
 }
-@keyframes cell-glow {
-  0%, 70%, 100% { opacity: 0; }
-  82% { opacity: .22; }
+.strip.wave-once .cell:not(.pad)::after {
+  animation: cell-glow 900ms ease-in-out both;
+  animation-delay: calc(var(--wcol, 0) * 30ms + var(--row, 0) * 22ms);
 }
+@keyframes cell-wave { 0%, 100% { transform: translateY(0) scale(1); } 40% { transform: translateY(-3px) scale(1.14); } }
+@keyframes cell-glow { 0%, 100% { opacity: 0; } 40% { opacity: .28; } }
 .check-row { display: flex; align-items: center; gap: 8px; }
 .strip .cell.l1 { background: color-mix(in srgb, var(--accent) 28%, var(--bg)); }
 .strip .cell.l2 { background: color-mix(in srgb, var(--accent) 50%, var(--bg)); }

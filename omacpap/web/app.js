@@ -119,6 +119,13 @@
       return;
     }
     renderLastNight(); renderDevice(); renderStrip(); renderFacts(); renderCharts(); renderTable();
+    if (!S.introPlayed && window.OmaIntro) { // once per app open
+      S.introPlayed = true;
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        const stop = OmaIntro.play($("#strip"), S.state.first_name);
+        S.introStop = () => { S.introStop = null; stop(); };
+      }));
+    }
   }
 
   function renderLastNight() {
@@ -192,8 +199,8 @@
       b.setAttribute("aria-label", b.title);
       frag.append(b);
     });
+    S.introStop?.(); // a rebuild mid-intro just ends it
     strip.replaceChildren(frag);
-    strip.classList.toggle("wave", waveOn());
     $("#legend-goal").textContent = `${goalH()}+ h`;
     const wrap = strip.parentElement;
     requestAnimationFrame(() => { wrap.scrollLeft = wrap.scrollWidth; });
@@ -574,7 +581,6 @@
   });
   $("#wave-toggle").addEventListener("change", (e) => {
     localStorage.setItem("omacpap.wave", e.target.checked ? "on" : "off");
-    $("#strip").classList.toggle("wave", e.target.checked);
   });
   $("#device-file").addEventListener("change", (e) => {
     const file = e.target.files[0];
