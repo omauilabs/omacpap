@@ -39,7 +39,9 @@ install -Dm 755 "$SRC/bin/omacpap" "$APP_DIR/bin/omacpap"
 ln -sfn "$APP_DIR/bin/omacpap" "$BIN_DIR/omacpap"
 
 install -m 644 "$SRC/omacpap/web/icon.svg" "$ICON_DIR/omacpap.svg"
-install -m 644 "$SRC/share/omacpap.desktop" "$APPS_DIR/omacpap.desktop"
+# Absolute path: app launchers don't always have ~/.local/bin on PATH
+sed "s|^Exec=omacpap |Exec=$BIN_DIR/omacpap |" "$SRC/share/omacpap.desktop" > "$APPS_DIR/omacpap.desktop"
+chmod 644 "$APPS_DIR/omacpap.desktop"
 command -v update-desktop-database >/dev/null && update-desktop-database -q "$APPS_DIR" || true
 command -v gtk-update-icon-cache >/dev/null && gtk-update-icon-cache -q "$(dirname "$(dirname "$ICON_DIR")")" 2>/dev/null || true
 
