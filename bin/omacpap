@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# OmaCPAP launcher — works from a git checkout or an installed copy.
+here="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
+export PYTHONPATH="$here${PYTHONPATH:+:$PYTHONPATH}"
+exec python3 -m omacpap "$@"

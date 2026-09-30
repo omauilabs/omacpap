@@ -1,0 +1,11 @@
+[Unit]
+Description=OmaCPAP — sync nightly CPAP data from ResMed myAir
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/omacpap sync --quiet --notify
+# Keyring access for the saved myAir password
+Environment=DBUS_SESSION_BUS_ADDRESS=unix:path=%t/bus
+Nice=10

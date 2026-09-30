@@ -1,0 +1,13 @@
+[Unit]
+Description=OmaCPAP — check myAir for last night's data
+
+[Timer]
+# The AirSense uploads over cellular shortly after you take the mask off;
+# myAir usually has it by mid-morning. A second pass catches late uploads.
+OnCalendar=*-*-* 09:52
+OnCalendar=*-*-* 14:52
+RandomizedDelaySec=10m
+Persistent=true
+
+[Install]
+WantedBy=timers.target

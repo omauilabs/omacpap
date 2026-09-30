@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OmaCPAP</title>
+  <link rel="icon" href="/static/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/vendor/uPlot.min.css">
+  <link rel="stylesheet" id="theme-css" href="/theme.css">
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+  <header class="bar">
+    <div class="brand"><img src="/static/icon.svg" alt="" width="18" height="18"><span>OmaCPAP</span></div>
+    <nav class="ranges" aria-label="Date range">
+      <button data-range="30" title="Last 30 nights (1)">30 nights</button>
+      <button data-range="90" title="Last 90 nights (2)">90</button>
+      <button data-range="365" title="Last year (3)">1 year</button>
+      <button data-range="all" title="Everything (4)">All</button>
+    </nav>
+    <div class="actions">
+      <span id="sync-status" class="status" aria-live="polite"></span>
+      <button id="btn-sync" class="primary" title="Sync myAir (s)">Sync</button>
+      <a id="btn-report" class="btn" href="/report?days=90" target="_blank" rel="noopener" title="Printable report (r)">Report</a>
+      <button id="btn-settings" title="Settings (,)" aria-label="Settings">⚙</button>
+    </div>
+  </header>
+
+  <!-- First run: connect myAir -->
+  <section id="connect" class="connect" hidden>
+    <div class="connect-inner">
+      <h1>Connect ResMed myAir</h1>
+      <p>OmaCPAP signs in to myAir the same way the website does, downloads your full history,
+         and keeps it on this computer. Your password goes to ResMed only and is saved in your keyring.</p>
+      <form id="login-form" autocomplete="on">
+        <label>myAir email<input name="username" type="email" required autocomplete="username"></label>
+        <label>Password<input name="password" type="password" required autocomplete="current-password"></label>
+        <label>Region
+          <select name="region">
+            <option value="NA">Americas / Australia (myair.resmed.com)</option>
+            <option value="EU">Europe (myair.resmed.eu)</option>
+          </select>
+        </label>
+        <label class="check"><input name="remember" type="checkbox" checked> Save password to keyring for nightly auto-sync</label>
+        <button class="primary" type="submit">Sign in and download history</button>
+      </form>
+      <form id="mfa-form" hidden>
+        <p id="mfa-msg">ResMed emailed you a verification code.</p>
+        <label>Verification code<input name="code" inputmode="numeric" autocomplete="one-time-code" required></label>
+        <button class="primary" type="submit">Verify</button>
+      </form>
+      <p id="connect-error" class="error" role="alert"></p>
+      <p class="fine">Unofficial: ResMed publishes no API, so a change on their side can break syncing until OmaCPAP is updated. Data you've already downloaded stays put.</p>
+    </div>
+  </section>
+
+  <main id="app" hidden>
+    <section class="hero">
+      <p id="last-night" class="last-night"></p>
+      <div class="strip-wrap">
+        <div id="strip" class="strip" role="grid" aria-label="Nightly usage calendar"></div>
+      </div>
+      <div class="strip-legend" aria-hidden="true">
+          <span>0 h</span><i class="l0"></i><i class="l1"></i><i class="l2"></i><i class="l3"></i><i class="l4"></i><span id="legend-max">8+ h</span>
+          <span class="gap"></span><i class="goal"></i><span id="legend-goal">met goal</span>
+      </div>
+    </section>
+
+    <section class="grid">
+      <aside class="facts">
+        <h2 id="facts-title">Last 30 nights</h2>
+        <dl id="facts"></dl>
+        <h2>What stands out</h2>
+        <ul id="insights" class="insights"></ul>
+      </aside>
+      <div class="charts">
+        <figure><figcaption>Hours used <span class="ref" id="cap-goal"></span></figcaption><div id="ch-usage" class="chart"></div></figure>
+        <figure><figcaption>AHI, events per hour <span class="ref" id="cap-ahi"></span></figcaption><div id="ch-ahi" class="chart"></div></figure>
+        <figure><figcaption>Mask leak, L/min <span class="ref" id="cap-leak"></span></figcaption><div id="ch-leak" class="chart"></div></figure>
+        <figure><figcaption>myAir score</figcaption><div id="ch-score" class="chart"></div></figure>
+      </div>
+    </section>
+
+    <section class="table-wrap">
+      <div class="table-head">
+        <h2>Nights</h2>
+        <a class="btn subtle" href="/api/export.csv" download>Export CSV</a>
+      </div>
+      <table id="nights">
+        <thead><tr>
+          <th data-sort="date" aria-sort="descending">Date</th><th data-sort="usage_min">Hours</th>
+          <th data-sort="ahi">AHI</th><th data-sort="leak_lpm">Leak</th><th data-sort="mask_pairs">On/off</th>
+          <th data-sort="sleep_score">Score</th><th>Note</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </section>
+  </main>
+
+  <!-- Night detail -->
+  <aside id="night" class="drawer" hidden aria-labelledby="night-title">
+    <header><h2 id="night-title"></h2><button class="close" data-close aria-label="Close">✕</button></header>
+    <div id="night-body"></div>
+    <label class="note-label">Note for this night
+      <textarea id="night-note" rows="3" placeholder="New mask, allergies, late coffee, travel…"></textarea>
+    </label>
+    <div class="drawer-foot"><span class="hint">j / k to step through nights</span><button id="night-save" class="primary">Save note</button></div>
+  </aside>
+
+  <!-- Settings -->
+  <aside id="settings" class="drawer" hidden aria-labelledby="settings-title">
+    <header><h2 id="settings-title">Settings</h2><button class="close" data-close aria-label="Close">✕</button></header>
+    <div class="settings-body">
+      <h3>myAir</h3>
+      <p id="acct-line"></p>
+      <div class="row">
+        <button id="btn-full">Re-download all history</button>
+        <button id="btn-probe" title="Test which extra fields ResMed will return for your account">Find more data fields</button>
+        <button id="btn-logout" class="danger">Sign out</button>
+      </div>
+      <p id="fields-line" class="fine"></p>
+      <h3>Reference lines</h3>
+      <form id="prefs" class="prefs">
+        <label>Nightly goal (hours)<input name="usage_goal_hours" type="number" step="0.5" min="1" max="12"></label>
+        <label>AHI line<input name="ahi_reference" type="number" step="1" min="1" max="30"></label>
+        <label>Leak line (L/min)<input name="leak_reference" type="number" step="1" min="5" max="60"></label>
+        <button class="primary" type="submit">Save</button>
+      </form>
+      <h3>SD card (optional)</h3>
+      <p class="fine">Your machine uploads summaries over cellular, which is all myAir keeps. If you ever insert an SD card, the AirSense records per-breath detail and apnea types to it; import it here to add those to each night.</p>
+      <div class="row"><input id="sd-path" placeholder="Card path (auto-detected if blank)"><button id="btn-sd">Import card</button></div>
+      <h3>Recent syncs</h3>
+      <ul id="sync-log" class="sync-log"></ul>
+      <p class="fine">Keyboard: 1–4 range · s sync · r report · , settings · Esc close.</p>
+      <p class="fine" id="version-line"></p>
+    </div>
+  </aside>
+  <div id="scrim" class="scrim" hidden></div>
+
+  <script src="/static/vendor/uPlot.iife.min.js"></script>
+  <script src="/static/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=OmaCPAP
+GenericName=CPAP Data Analyzer
+Comment=Your ResMed CPAP history from myAir, kept on this computer
+Exec=omacpap open
+Icon=omacpap
+Terminal=false
+Categories=Utility;MedicalSoftware;
+Keywords=cpap;resmed;myair;sleep;apnea;airsense;
+StartupWMClass=chrome-127.0.0.1__-Default
