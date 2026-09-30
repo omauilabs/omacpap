@@ -79,6 +79,32 @@ main { padding: 0 20px 48px; max-width: 1400px; margin: 0 auto; }
 .strip { display: grid; grid-template-rows: 14px repeat(7, 13px); grid-auto-columns: 13px; gap: 3px; width: max-content; }
 .strip .cell { width: 13px; height: 13px; background: var(--faint); cursor: pointer; border: 0; padding: 0; }
 .strip .cell.pad { background: transparent; cursor: default; }
+
+/* Rolling wave: each square lifts and glows in turn, phase set by its column and row,
+   so the crest travels diagonally across the calendar. Transform/opacity only (GPU-cheap). */
+.strip .cell { position: relative; }
+.strip .cell::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: var(--fg); opacity: 0;
+}
+.strip.wave .cell:not(.pad) {
+  animation: cell-wave 4.2s ease-in-out infinite;
+  animation-delay: calc(var(--col, 0) * 75ms + var(--row, 0) * 55ms - 20s);
+}
+.strip.wave .cell:not(.pad)::after {
+  animation: cell-glow 4.2s ease-in-out infinite;
+  animation-delay: inherit;
+}
+.strip.wave:hover .cell, .strip.wave:hover .cell::after { animation-play-state: paused; }
+@keyframes cell-wave {
+  0%, 70%, 100% { transform: translateY(0) scale(1); }
+  82% { transform: translateY(-3px) scale(1.12); }
+}
+@keyframes cell-glow {
+  0%, 70%, 100% { opacity: 0; }
+  82% { opacity: .22; }
+}
+.check-row { display: flex; align-items: center; gap: 8px; }
 .strip .cell.l1 { background: color-mix(in srgb, var(--accent) 28%, var(--bg)); }
 .strip .cell.l2 { background: color-mix(in srgb, var(--accent) 50%, var(--bg)); }
 .strip .cell.l3 { background: color-mix(in srgb, var(--accent) 74%, var(--bg)); }
@@ -190,4 +216,4 @@ textarea { resize: vertical; }
   .prefs { grid-template-columns: 1fr; }
   td.note, th:last-child { display: none; }
 }
-@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }

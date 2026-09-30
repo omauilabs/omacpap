@@ -15,7 +15,7 @@ OmaCPAP signs in to ResMed myAir the same way the myAir website does, downloads 
 | **Full history backfill** | Walks myAir month by month back to your first night, then stops after three empty months. |
 | **Nightly auto-sync** | systemd user timer at 09:52 and 14:52; desktop notification with last night's numbers. |
 | **Per-night data** | Time on mask, AHI, 95th-percentile mask leak (L/min), mask on/off count, myAir score and its four sub-scores (usage /70, mask seal /20, events /5, on/off /5). |
-| **Dashboard** | Year-at-a-glance usage calendar, trend charts (daily for ≤200 nights, weekly averages beyond), compliance %, streaks, best 30-night run, weekday patterns, plain-language observations, per-night notes. |
+| **Dashboard** | Year-at-a-glance usage calendar (with a rolling wave animation you can switch off in Settings; paused on hover and under reduced-motion), trend charts (daily for ≤200 nights, weekly averages beyond), compliance %, streaks, best 30-night run, weekday patterns, plain-language observations, per-night notes. |
 | **Printable report** | `Report` button or `omacpap report` — a clean HTML page to print or save as PDF for sleep-clinic visits. |
 | **Field discovery** | `omacpap probe` tests ~60 candidate field names against ResMed's schema (introspection is disabled) and starts saving any extras your account returns. |
 | **Device picture** | The header shows a theme-colored CPAP illustration whose screen displays last night's hours. Swap in your own photo (transparent PNG works best) under Settings → Device picture. |

@@ -138,6 +138,8 @@
       ` <span class="dim">30-night average ${num(w30.usage_avg_h)} h, streak ${S.summary.streak_current} night${S.summary.streak_current === 1 ? "" : "s"} at ${goalH()}+ h.</span>`;
   }
 
+  const waveOn = () => localStorage.getItem("omacpap.wave") !== "off";
+
   function renderDevice() {
     const v = S.state?.device_image;
     const img = $("#device-photo"), art = $("#device-art");
@@ -184,12 +186,14 @@
       const b = document.createElement("button");
       b.className = `cell l${level(n.usage_min)}${(n.usage_min || 0) >= goal ? " goal" : ""}${S.selected === n.date ? " sel" : ""}`;
       b.style.gridColumn = col; b.style.gridRow = row;
+      b.style.setProperty("--col", col); b.style.setProperty("--row", row - 2);
       b.dataset.date = n.date;
       b.title = `${fmtDate(n.date)} — ${n.missing ? "no data" : hm(n.usage_min) + (n.ahi != null ? `, AHI ${num(n.ahi)}` : "")}`;
       b.setAttribute("aria-label", b.title);
       frag.append(b);
     });
     strip.replaceChildren(frag);
+    strip.classList.toggle("wave", waveOn());
     $("#legend-goal").textContent = `${goalH()}+ h`;
     const wrap = strip.parentElement;
     requestAnimationFrame(() => { wrap.scrollLeft = wrap.scrollWidth; });
@@ -483,6 +487,7 @@
     $("#fields-line").textContent = st.extra_fields.length
       ? `Extra fields in every sync: ${st.extra_fields.join(", ")}`
       : "Only the standard myAir fields are being collected.";
+    $("#wave-toggle").checked = waveOn();
     const f = $("#prefs");
     for (const [k, v] of Object.entries(st.settings)) f.elements[k].value = v;
     $("#sync-log").innerHTML = (st.syncs || []).map((s) =>
@@ -566,6 +571,10 @@
   $("#btn-logout").addEventListener("click", async () => {
     if (!confirm("Sign out of myAir? Your downloaded nights stay on this computer.")) return;
     await api("/api/logout", {}); closeDrawers(); await loadState(); showConnect();
+  });
+  $("#wave-toggle").addEventListener("change", (e) => {
+    localStorage.setItem("omacpap.wave", e.target.checked ? "on" : "off");
+    $("#strip").classList.toggle("wave", e.target.checked);
   });
   $("#device-file").addEventListener("change", (e) => {
     const file = e.target.files[0];
