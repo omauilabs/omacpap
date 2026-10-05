@@ -88,7 +88,7 @@ def api_state() -> dict[str, Any]:
             "username": _mask(cfg.get("username")),
             "region": cfg.get("region"),
             "keyring": secrets_store.keyring_available(),
-            "has_password": bool(cfg.get("username") and secrets_store.get_password(cfg["username"])),
+            "has_password": bool(cfg.get("username") and secrets_store.has_password(cfg["username"])),
             "last_sync": db.meta_get(con, "last_sync"),
             "first_name": db.meta_get(con, "patient_first_name"),
             "device": dict(dev) if dev else None,
@@ -239,11 +239,15 @@ def _device_image_version() -> str | None:
     return str(found[0].stat().st_mtime_ns) if found else None
 
 
-def api_device_image(body: dict[str, Any]) -> dict[str, Any]:
-    """Save (or clear) the user's own picture of their machine, shown in the dashboard header."""
+def _remove_device_images() -> None:
     for old in paths.data_dir().glob("device-image.*"):
         old.unlink()
+
+
+def api_device_image(body: dict[str, Any]) -> dict[str, Any]:
+    """Save (or clear) the user's own picture of their machine, shown in the dashboard header."""
     if body.get("clear"):
+        _remove_device_images()
         return {"ok": True, "device_image": None}
     data = str(body.get("data", ""))
     if "," in data:
@@ -257,6 +261,8 @@ def api_device_image(body: dict[str, Any]) -> dict[str, Any]:
     kind = next((v for magic, v in DEVICE_IMAGE_TYPES.items() if raw.startswith(magic)), None)
     if not kind or (kind[0] == "webp" and raw[8:12] != b"WEBP"):
         raise MyAirError("Use a PNG, WebP or JPEG image.")
+    # only replace the current picture once the new one has passed validation
+    _remove_device_images()
     dest = paths.data_dir() / f"device-image.{kind[0]}"
     dest.write_bytes(raw)
     os.chmod(dest, 0o600)

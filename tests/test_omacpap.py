@@ -233,6 +233,8 @@ class T05_Server(unittest.TestCase):
         self.assertEqual((code, h["Content-Type"], body), (200, "image/png", png))
         code, _ = self.post("/api/device-image", {"data": base64.b64encode(b"<svg onload=alert(1)>").decode()})
         self.assertEqual(code, 400)
+        code, body, _ = self.get("/device-image")  # a rejected upload keeps the existing picture
+        self.assertEqual((code, body), (200, png))
         code, _ = self.post("/api/device-image", {"clear": True})
         with self.assertRaises(urllib.error.HTTPError):
             self.get("/device-image")
@@ -247,6 +249,42 @@ class T05_Server(unittest.TestCase):
                 break
             threading.Event().wait(0.1)
         self.assertIsNone(server.JOB.error)
+
+
+class T07_KeyringCache(unittest.TestCase):
+    def setUp(self):
+        secrets_store.invalidate_cache()
+        self.calls = []
+        self._orig = secrets_store.subprocess.run
+        self._which = secrets_store.shutil.which
+
+        def fake_run(args, **kw):
+            self.calls.append(args[1])
+            out = b"pw" if args[1] == "lookup" else b""
+            return secrets_store.subprocess.CompletedProcess(args, 0, out, b"")
+        secrets_store.subprocess.run = fake_run
+        secrets_store.shutil.which = lambda _: "/usr/bin/secret-tool"
+        self._env = os.environ.pop("OMACPAP_MYAIR_PASSWORD", None)
+
+    def tearDown(self):
+        secrets_store.subprocess.run = self._orig
+        secrets_store.shutil.which = self._which
+        if self._env is not None:
+            os.environ["OMACPAP_MYAIR_PASSWORD"] = self._env
+        secrets_store.invalidate_cache()
+
+    def test_status_checks_are_cached(self):
+        for _ in range(5):
+            self.assertTrue(secrets_store.keyring_available())
+            self.assertTrue(secrets_store.has_password("a@example.com"))
+        self.assertEqual(self.calls, ["search", "lookup"])
+
+    def test_changes_invalidate(self):
+        secrets_store.has_password("a@example.com")
+        secrets_store.forget("a@example.com")
+        self.calls.clear()
+        secrets_store.has_password("a@example.com")
+        self.assertEqual(self.calls, ["lookup"])  # password re-checked, not served from cache
 
 
 class T06_Theme(unittest.TestCase):

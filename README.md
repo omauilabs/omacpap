@@ -25,14 +25,14 @@ OmaCPAP signs in to ResMed myAir the same way the myAir website does, downloads 
 
 ### What myAir does *not* have
 
-Your AirSense 10 uploads **nightly summaries** over its cellular modem — that's all myAir stores. Pressure curves, apnea-type breakdowns (obstructive vs. central vs. hypopnea), and breath-by-breath flow are only written to an **SD card**. You don't have one installed, so OmaCPAP is built around myAir. If you ever want the deep detail going forward, any SDHC card in the machine's slot starts recording it; `omacpap import-sd` (or Settings → SD card) merges those files into the same nights. Nothing in the app depends on it.
+An AirSense 10/11 uploads **nightly summaries** over its cellular modem — that's all myAir stores. Pressure curves, apnea-type breakdowns (obstructive vs. central vs. hypopnea), and breath-by-breath flow are only written to an **SD card**. Many machines run without one, so OmaCPAP is built around myAir. If you want the deep detail going forward, any SDHC card in the machine's slot starts recording it; `omacpap import-sd` (or Settings → SD card) merges those files into the same nights. Nothing in the app depends on it.
 
 ---
 
 ## Install
 
 ```bash
-git clone <this repo> ~/Projects/omacpap   # or unpack the tarball
+git clone https://github.com/omauilabs/omacpap.git ~/Projects/omacpap
 cd ~/Projects/omacpap
 ./install.sh --deps       # --deps runs: sudo pacman -S --needed python libsecret gnome-keyring
 ```
@@ -141,7 +141,7 @@ Endpoints, client IDs, and the flow come from [prestomation/resmed_myair_sensors
 ## Development
 
 ```bash
-python3 -m unittest discover -s tests -v     # 17 tests, all against a local mock of ResMed
+python3 -m unittest discover -s tests -v     # 19 tests, all against a local mock of ResMed
 python3 -m tests.mock_myair 9999 &           # fake myAir with ~3.5 years of synthetic nights
 OMACPAP_MYAIR_MOCK=http://127.0.0.1:9999 OMACPAP_DATA_DIR=/tmp/oc omacpap login   # password: demo (or "mfa", code 123456)
 ```
