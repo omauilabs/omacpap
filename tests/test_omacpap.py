@@ -26,6 +26,11 @@ from tests.edfwriter import make_card  # noqa: E402
 MOCK, MOCK_URL = mock_myair.start()
 os.environ["OMACPAP_MYAIR_MOCK"] = MOCK_URL
 
+
+def tearDownModule():
+    MOCK.shutdown()
+    MOCK.server_close()
+
 from omacpap import analysis, db, edf, myair, report, sdcard, secrets_store, server, sync, theme  # noqa: E402
 
 EXPECTED_NIGHTS = sum(
@@ -171,11 +176,19 @@ class T05_Server(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         cls.httpd.shutdown()
+        cls.httpd.server_close()
 
     def get(self, path, headers=None):
         req = urllib.request.Request(self.base + path, headers=headers or {})
         with urllib.request.urlopen(req, timeout=5) as r:
             return r.status, r.read(), r.headers
+
+    def get_error(self, path, headers=None) -> int:
+        """GET that must fail: returns the status and closes the error response."""
+        with self.assertRaises(urllib.error.HTTPError) as cm:
+            self.get(path, headers)
+        with cm.exception as e:
+            return e.code
 
     def post(self, path, body, headers=None):
         h = {"Content-Type": "application/json", "X-OmaCPAP": "1", **(headers or {})}
@@ -184,7 +197,8 @@ class T05_Server(unittest.TestCase):
             with urllib.request.urlopen(req, timeout=10) as r:
                 return r.status, json.loads(r.read())
         except urllib.error.HTTPError as e:
-            return e.code, e.read()
+            with e:
+                return e.code, e.read()
 
     def test_pages_and_api(self):
         code, body, h = self.get("/")
@@ -200,13 +214,10 @@ class T05_Server(unittest.TestCase):
         self.assertEqual(self.get("/static/vendor/uPlot.iife.min.js")[0], 200)
 
     def test_guards(self):
-        with self.assertRaises(urllib.error.HTTPError) as cm:
-            self.get("/api/state", {"Host": "evil.example:80"})
-        self.assertEqual(cm.exception.code, 403)
+        self.assertEqual(self.get_error("/api/state", {"Host": "evil.example:80"}), 403)
         code, _ = self.post("/api/note", {"date": "2025-01-01", "text": "x"}, {"X-OmaCPAP": "0"})
         self.assertEqual(code, 403)
-        with self.assertRaises(urllib.error.HTTPError):
-            self.get("/static/../server.py")
+        self.get_error("/static/../server.py")
 
     def test_note_and_settings(self):
         with db.session() as con:
@@ -236,13 +247,10 @@ class T05_Server(unittest.TestCase):
         code, body, _ = self.get("/device-image")  # a rejected upload keeps the existing picture
         self.assertEqual((code, body), (200, png))
         code, _ = self.post("/api/device-image", {"clear": True})
-        with self.assertRaises(urllib.error.HTTPError):
-            self.get("/device-image")
+        self.get_error("/device-image")
 
     def test_report_rejects_bad_days(self):
-        with self.assertRaises(urllib.error.HTTPError) as cm:
-            self.get("/report?days=abc")
-        self.assertEqual(cm.exception.code, 400)
+        self.assertEqual(self.get_error("/report?days=abc"), 400)
 
     def test_login_mfa_via_api(self):
         code, r = self.post("/api/login", {"username": "demo@example.com", "password": "mfa", "region": "NA"})
