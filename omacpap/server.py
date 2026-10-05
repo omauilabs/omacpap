@@ -133,8 +133,7 @@ def api_login(body: dict[str, Any]) -> dict[str, Any]:
     except MFARequired as e:
         _pending_login.update(client=client, remember=bool(body.get("remember", True)), region=region)
         return {"status": "MFA_REQUIRED", "message": str(e)}
-    _finish_login(client, region, bool(body.get("remember", True)), cfg)
-    return {"status": "SUCCESS"}
+    return _finish_login(client, region, bool(body.get("remember", True)), cfg)
 
 
 def api_mfa(body: dict[str, Any]) -> dict[str, Any]:
@@ -142,20 +141,25 @@ def api_mfa(body: dict[str, Any]) -> dict[str, Any]:
         raise MyAirError("No sign-in is waiting for a code. Start again.")
     client: MyAirClient = _pending_login["client"]
     client.verify_mfa(str(body.get("code", "")))
-    _finish_login(client, _pending_login["region"], _pending_login["remember"], secrets_store.load_config())
+    result = _finish_login(client, _pending_login["region"], _pending_login["remember"], secrets_store.load_config())
     _pending_login.clear()
-    return {"status": "SUCCESS"}
+    return result
 
 
-def _finish_login(client: MyAirClient, region: str, remember: bool, cfg: dict[str, Any]) -> None:
+def _finish_login(client: MyAirClient, region: str, remember: bool, cfg: dict[str, Any]) -> dict[str, Any]:
     cfg.update(username=client.username, region=region)
     secrets_store.save_config(cfg)
     persist_session(client)
     stored = remember and client.password and secrets_store.save_password(client.username, client.password)
     # kick off the first sync right away with the live client (works even without a keyring)
-    JOB.start("sync", lambda p: run_sync(client=client, progress=p))
+    started = JOB.start("sync", lambda p: run_sync(client=client, progress=p))
     if not stored:
         log.info("password not stored in keyring; nightly background sync will need `omacpap login`")
+    if not started:
+        log.warning("signed in, but %s is still running; first sync not started", JOB.kind)
+        return {"status": "SUCCESS", "sync_started": False,
+                "notice": "Signed in. Another task is still running — press Sync when it finishes."}
+    return {"status": "SUCCESS", "sync_started": True}
 
 
 def api_sync(body: dict[str, Any]) -> dict[str, Any]:
@@ -348,7 +352,10 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(200, export_csv().encode(), "text/csv",
                                   {"Content-Disposition": 'attachment; filename="omacpap-nights.csv"'})
             if url.path == "/report":
-                days = int(q.get("days", 90))
+                try:
+                    days = max(1, min(int(q.get("days", 90)), 36500))
+                except ValueError:
+                    return self._send(400, b"days must be a whole number", "text/plain")
                 return self._send(200, report.render(days=days).encode(), "text/html; charset=utf-8")
             self._send(404, b"not found", "text/plain")
         except Exception as e:  # noqa: BLE001

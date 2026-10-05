@@ -549,7 +549,7 @@
       });
       f.password.value = "";
       if (r.status === "MFA_REQUIRED") { $("#mfa-msg").textContent = r.message; showConnect(true); }
-      else { await loadState(); await showApp(); watchJob(); }
+      else { await loadState(); await showApp(); watchJob(); if (r.notice) setStatus(r.notice); }
     } catch (err) { $("#connect-error").textContent = err.message; }
     finally { btn.disabled = false; btn.textContent = "Sign in and download history"; }
   });
@@ -559,9 +559,9 @@
     const btn = e.target.querySelector("button");
     btn.disabled = true; $("#connect-error").textContent = "";
     try {
-      await api("/api/mfa", { code: e.target.code.value });
+      const r = await api("/api/mfa", { code: e.target.code.value });
       e.target.code.value = "";
-      await loadState(); await showApp(); watchJob();
+      await loadState(); await showApp(); watchJob(); if (r.notice) setStatus(r.notice);
     } catch (err) { $("#connect-error").textContent = err.message; }
     finally { btn.disabled = false; }
   });
