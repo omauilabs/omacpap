@@ -91,7 +91,11 @@ class Region:
         return f"{self._okta}/oauth2/{self.auth_server_id}/v1/token"
 
     def mfa_url(self, factor_id: str | None = None) -> str:
-        return f"{self._okta}/api/v1/authn/factors/{factor_id or self.email_factor_id}/verify?rememberDevice=true"
+        factor_id = factor_id or self.email_factor_id
+        if not factor_id:
+            raise AuthError("myAir asked for a verification code but didn't say how to send it. "
+                            "Sign in once at myair.resmed.com, then try again.")
+        return f"{self._okta}/api/v1/authn/factors/{factor_id}/verify?rememberDevice=true"
 
 
 REGIONS: dict[str, Region] = {
@@ -101,7 +105,7 @@ REGIONS: dict[str, Region] = {
         auth_server_id="aus4ccsxvnidQgLmA297", client_id="0oa4ccq1v413ypROi297",
         api_key="da2-cenztfjrezhwphdqtwtbpqvzui",
         graphql_url="https://graphql.myair-prd.dht.live/graphql",
-        redirect_url="https://myair.resmed.com", email_factor_id="xxx",
+        redirect_url="https://myair.resmed.com", email_factor_id="",  # no known fixed id; use the one Okta returns
     ),
     "EU": Region(
         code="EU", product="myAir EU", okta_host="id.resmed.eu",

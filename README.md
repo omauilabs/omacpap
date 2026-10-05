@@ -141,7 +141,7 @@ Endpoints, client IDs, and the flow come from [prestomation/resmed_myair_sensors
 ## Development
 
 ```bash
-python3 -m unittest discover -s tests -v     # 19 tests, all against a local mock of ResMed
+python3 -m unittest discover -s tests -v     # 21 tests, all against a local mock of ResMed
 python3 -m tests.mock_myair 9999 &           # fake myAir with ~3.5 years of synthetic nights
 OMACPAP_MYAIR_MOCK=http://127.0.0.1:9999 OMACPAP_DATA_DIR=/tmp/oc omacpap login   # password: demo (or "mfa", code 123456)
 ```

@@ -239,6 +239,11 @@ class T05_Server(unittest.TestCase):
         with self.assertRaises(urllib.error.HTTPError):
             self.get("/device-image")
 
+    def test_report_rejects_bad_days(self):
+        with self.assertRaises(urllib.error.HTTPError) as cm:
+            self.get("/report?days=abc")
+        self.assertEqual(cm.exception.code, 400)
+
     def test_login_mfa_via_api(self):
         code, r = self.post("/api/login", {"username": "demo@example.com", "password": "mfa", "region": "NA"})
         self.assertEqual((code, r["status"]), (200, "MFA_REQUIRED"))
@@ -249,6 +254,14 @@ class T05_Server(unittest.TestCase):
                 break
             threading.Event().wait(0.1)
         self.assertIsNone(server.JOB.error)
+
+
+class T08_MFAFactor(unittest.TestCase):
+    def test_missing_factor_is_actionable(self):
+        region = myair.get_region("NA")
+        with self.assertRaises(myair.AuthError):
+            region.mfa_url()
+        self.assertIn("/factors/fac9/verify", region.mfa_url("fac9"))
 
 
 class T07_KeyringCache(unittest.TestCase):
