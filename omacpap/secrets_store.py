@@ -12,6 +12,7 @@ import json
 import os
 import shutil
 import subprocess
+import time
 from pathlib import Path
 from typing import Any
 
@@ -19,8 +20,27 @@ from . import APP_ID, paths
 
 ATTRS = ["service", APP_ID]
 
+# The dashboard polls its state every few seconds; each keyring call spawns
+# secret-tool and, with a locked keyring, can raise an unlock prompt. Cache the
+# answers briefly and drop them whenever OmaCPAP itself changes the keyring.
+CACHE_TTL = 300.0
+_cache: dict[tuple[str, ...], tuple[float, object]] = {}
 
-def keyring_available() -> bool:
+
+def _cached(key: tuple[str, ...], fn):
+    hit = _cache.get(key)
+    if hit and time.monotonic() - hit[0] < CACHE_TTL:
+        return hit[1]
+    val = fn()
+    _cache[key] = (time.monotonic(), val)
+    return val
+
+
+def invalidate_cache() -> None:
+    _cache.clear()
+
+
+def _keyring_probe() -> bool:
     if not shutil.which("secret-tool"):
         return False
     try:
@@ -31,9 +51,14 @@ def keyring_available() -> bool:
         return False
 
 
+def keyring_available() -> bool:
+    return _cached(("keyring",), _keyring_probe)
+
+
 def _store(kind: str, account: str, secret: str, label: str) -> bool:
     if not keyring_available():
         return False
+    invalidate_cache()
     r = subprocess.run(["secret-tool", "store", f"--label={label}", *ATTRS, "kind", kind, "account", account],
                        input=secret.encode(), capture_output=True, timeout=10)
     return r.returncode == 0
@@ -48,6 +73,7 @@ def _lookup(kind: str, account: str) -> str | None:
 
 
 def _clear(kind: str, account: str) -> None:
+    invalidate_cache()
     if keyring_available():
         subprocess.run(["secret-tool", "clear", *ATTRS, "kind", kind, "account", account],
                        capture_output=True, timeout=10)
@@ -60,6 +86,12 @@ def save_password(account: str, password: str) -> bool:
 
 def get_password(account: str) -> str | None:
     return os.environ.get("OMACPAP_MYAIR_PASSWORD") or _lookup("password", account)
+
+
+def has_password(account: str) -> bool:
+    """Cheap, cached check for status displays (never returns the secret)."""
+    return bool(os.environ.get("OMACPAP_MYAIR_PASSWORD")) or \
+        _cached(("has_password", account), lambda: _lookup("password", account) is not None)
 
 
 # ------------------------------------------------------------------ session tokens
