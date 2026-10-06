@@ -277,7 +277,8 @@ class MyAirClient:
             with self._opener.open(req, timeout=self.timeout) as r:
                 resp = Response(r.status, r.headers, r.read())
         except urllib.error.HTTPError as e:  # 3xx (no-redirect) and 4xx/5xx land here
-            resp = Response(e.code, e.headers, e.read() if e.fp else b"")
+            with e:  # the error is also the open response; close it once read
+                resp = Response(e.code, e.headers, e.read() if e.fp else b"")
         except urllib.error.URLError as e:
             raise MyAirError(f"Could not reach {urllib.parse.urlparse(url).netloc}: {e.reason}") from e
         self._absorb_cookies(resp)
