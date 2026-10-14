@@ -16,9 +16,11 @@ concurrency:
 
 jobs:
   unittest:
-    # GitHub-hosted runners cost nothing for public repositories. Self-hosted
-    # runners must never serve a public repo: any fork PR could run code on them.
-    runs-on: ubuntu-latest
+    # Self-hosted only: GitHub-hosted runners are forbidden by owner rule (minutes cost money).
+    # This repo is public, so fork PRs are skipped: untrusted fork code must never run on our
+    # runners. Fork PRs can be tested by a maintainer pushing the branch to this repo.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: [self-hosted, Linux, X64, omauilabs]
     timeout-minutes: 10
     strategy:
       fail-fast: false
